@@ -1,0 +1,45 @@
+=Information Card
+
+A Ruby library for processing information cards.
+
+==Features
+* Easy to use API for decrypting, validating and processing SAML formatted information cards
+* Basic XML canonicalization (not yet fully c14n compliant)
+* Flexible configuration
+* Comprehensive test suite
+
+==Installing
+  gem intall information_card
+  
+The library is known to work with Ruby 1.8.4 and up on Win32, Max OSX and Ubuntu 6.06
+Examples were tested with Rails 1.2.3
+
+==Getting Started
+For documentation, visit http://informationcardruby.com/documents
+
+==Homepage
+http://informationcardruby.com
+
+See also:
+http://rubyforge.org/projects/informationcard
+http://www.codeplex.com/informationcardruby
+
+==Community
+Discussion regarding the Information Card library takes place on the RubyForge mailing lists
+
+http://rubyforge.org/mailman/listinfo/informationcard-users
+
+Please join us to discuss, ask questions and report bugs
+
+==Authors
+Joe Poon
+Jason Sallis
+
+==License
+Copyright (c) 2007 ThoughtWorks, released under the BSD license
+
+
+
+
+
+

@@ -1,0 +1,186 @@
+InformationCardAuthentication
+=============================
+A plugin for integrating information card authentication into your Rails application.
+
+Prerequisites
+=============
+Server
+------
+Web server with SSL For an application to accept Information Cards, an SSL channel is most likely required. 
+To configure a Ruby on Rails application to use SSL, an option is to use Apache with mod_ssl which proxies
+requests to your mongrel server or cluster.
+
+Client
+------
+* Internet Explorer 7 with Windows Vista or Windows XP with .NET 3.0 Framework
+* Firefox with either the Identity Selector Extension or Identity Selector Plugin
+* Safari with the InfoCard Selector plugin
+* Another browser with an identity selector plugin
+
+Assumptions
+===========
+Information Card authentication is intended to supplement a user authentication system.
+It is assumed that you already have a Rails application with an existing authentication system already
+installed and configured.
+
+If you don't have one, an option is to use the acts_as_authenticated plugin.
+To install acts_as_authenticated, run the following commands from a command line inside your Rails application.
+
+  script/plugin source http://svn.techno-weenie.net/projects/plugins
+  script/plugin install acts_as_authenticated
+  script/generate authenticated user account
+  rake db:migrate
+
+Installation
+============
+Install the information_card gem from the remote repository.
+
+  gem install information_card
+
+Install plugin from the remote repository.
+
+  script/plugin install svn://rubyforge.org/var/svn/informationcard/plugin/trunk/information_card_authentication
+
+Run the generator scripts to incorporate Information Card authentication into your application 
+where <user model name> is replaced with your actual user model name (ie. User).
+
+  script/generate information_card_authentication <user model name>
+  
+The following files will be generated:
+  
+  create  db/migrate/002_create_<user model name>_information_cards.rb
+  create  app/models/<user model name>_information_card.rb
+  create  app/controllers/<user model name>_information_card_controller.rb
+  create  app/helpers/<user model name>_information_card_helper.rb
+  create  app/views/<user model name>_information_card
+  create  test/unit/information_card_authentication_test.rb
+  create  test/unit/<user model name>_information_card_test.rb
+  create  test/functional/<user model name>_information_card_controller_test.rb
+  create  test/fixtures/<user model name>_information_cards.yml
+  create  lib/information_card_authentication
+  create  lib/information_card_authentication.rb
+  
+Run the new database migration and tests to verify that everything worked correctly.
+  
+  rake db:migrate
+  rake test
+
+Configuration
+=============
+In your development.rb (and likely, test.rb and production.rb), add the following to configure Information Card 
+authentication, replacing the values with your own.
+
+  config.after_initialize do
+
+    # the path to your web server SSL certificate
+    InformationCard::Config.certificate_location = 'path/to/your/apache/ssl/directory'
+
+    # the subject of your SSL certificate
+    InformationCard::Config.certificate_subject = '/CN=http://yourwebsite.com'
+
+    # specifies audience restriction scope (:page level or :site level)
+    InformationCard::Config.audience_scope = :page
+    
+    # specifies url(s) from which assertions can be processed  
+    InformationCard::Config.audiences = ['https://yourwebsite.com/login']
+  
+    # claims which will be required to be specified by the user
+    InformationCard::Config.required_claims = [:ppid, :given_name, :surname]
+
+    # claim which will uniquely identify the Information Card
+    InformationCard::Config.identity_claim = :ppid
+
+  end
+
+SSL certificates must be named in the following format and placed in the same directory as configured above.
+
+  <certificate name>.key
+  <certificate name>.crt
+  
+Implementation
+==============
+Information Card authentication libraries are included automatically in <user model name>InformationCardController
+and <user model name>InformationCardHelper, but if you need them globally throughout your application, you can 
+optionally include them in ApplicationController and ApplicationHelper.
+
+application.rb
+--------------
+  class ApplicationController < ActionController::Base
+    include InformationCardAuthentication::ControllerExtensions
+
+application_helper.rb
+---------------------
+  module ApplicationHelper
+    include InformationCardAuthentication::ViewExtensions
+
+To create a form to launch the Information Card identity selector, include the following code in your view.
+Note the call to information_card_claims, which adds the required HTML markup to launch and inform the
+identity selector of the required claims (configured previously). Submitting this form will include 
+params[:encrypted_information_card] in the post to the server, which can be used in the subsequent controller 
+code to authenticate and create information cards.
+
+  <% form_tag do -%>
+    <%= information_card_claims %>
+    <%= submit_tag 'Log in with your Information Card' %>
+  <% end -%>
+
+To authenticate a user's Information Card, include the following code in the login method of your controller.
+
+  authenticate_with_information_card(params[:encrypted_information_card]) do |status, information_card, errors|
+    case status
+      when :failed_validation
+        flash[:error] = "Could not login with Information Card"
+        # redirect back to login page
+      when :failed_authentication
+        flash[:error] = "Could not login with Information Card"
+        # redirect back to login page
+      when :successful
+        if User.find_by_id(information_card.user.id)
+          flash[:notice] = "Logged in successfully"
+          # redirect to signed in page
+        else
+          flash[:error] = "Login unsuccessful"
+          # redirect back to login page
+        end
+    end
+  end
+
+To create a new Information Card, include the following code in the create method of your controller.
+This can be used to associate an Information Card with either a new user wishing to create an account or an existing user.
+Your code to handle the :successful case will need to be written accordingly.
+
+  create_information_card(params[:encrypted_information_card]) do |status, information_card, errors|
+    case status              
+      when :failed
+        flash[:error] = "Could not create Information Card"
+        #redirect back to signup page
+      when :duplicate
+        flash[:error] = "Information card has already been used"
+        #redirect back to signup page
+      when :successful
+        flash[:notice] = "Information card successfully added"
+        # associate Information Card with user (ie. user.user_information_cards << information_card)
+        # save user (ie. user.save)
+    end
+  end
+
+To remove an Information Card from the database and disassociate it from a user, add the following code to your controller.
+
+  UserInformationCard.find(params[:id]).destroy
+
+Community
+=========
+Discussion regarding the Information Card Authentication plugin takes place on the RubyForge mailing lists.
+
+http://rubyforge.org/mailman/listinfo/informationcard-users
+
+Please join us to discuss, ask questions and report bugs.
+
+Authors
+=======
+Joe Poon
+Jason Sallis
+
+Copyright and License
+=====================
+Copyright (c) 2007 ThoughtWorks, released under the BSD license.
